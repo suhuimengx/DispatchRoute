@@ -11,6 +11,7 @@ from tqdm import tqdm#用于循环中显示进度条
 import requests
 import numpy as np
 import xlrd as xd#读取Excel文件
+from uniCloudapi import post_carid,post_carinfo
 
 """
 动态插入接口 start
@@ -62,6 +63,7 @@ DijTime = np.zeros((nNodes,nNodes))
 for i in range(nNodes):
     for j in range(nNodes):
         DijTime[i,j] = DijDis[i][j]/dataDict['speed']
+
 
 # 染色体解码
 def decodeInd(ind):
@@ -266,7 +268,7 @@ def test_disconnect():
 
 def GetLocation(interval, device_id):
     """9
-    多线程定时服务，周期性更新车辆实时位置，递归调用（不能自动停止？），每次递归都创建一个线程
+    多线程定时服务，周期性更新车辆实时位置
     @param device_id: 要更新实时位置的设备id
     @param interval: 更新实时位置的周期间隔
     """
@@ -285,8 +287,8 @@ def GetLocation(interval, device_id):
         'location': location,
     }
     socketio.emit('send_message_location', data)
-    #在这里添加代码向unicloud发送小车的位置
-
+    #向unicloud跟新小车的位置
+    post_carinfo(car_id,location[1],location[0])
 
 def CalcuTime_dif(timestamp):
     """
@@ -329,7 +331,7 @@ def QueryUniCloud(url_count, url_doc):
             originTime = Clock.get_current_ConvertedTime()
             originTime_latest = originTime + new_doc["waitTime"]
             # destTime = CalcuTime_dif(new_doc["ArrivalTime"])
-            destTime = originTime_latest + 8
+            destTime = originTime_latest + 8  #这里为什么加了一个常数8？？？？？？？？？
             numDemand = new_doc["numDemand"]
             req = [originId, destId, originTime, originTime_latest, destTime, numDemand]
             print("需求信息：",req)
@@ -352,7 +354,8 @@ def QueryUniCloud(url_count, url_doc):
                 'originId': originId,
                 'destId': destId,
             })
-            #这里添加代码向uniapp发送接单信息（告知接单的小车）
+            #向uniapp发送接单信息（告知接单的小车）
+            post_carid(init_id,insert_car_id)
             Car_ServerLists_Length = [len(Car_ServerLists[0]), len(Car_ServerLists[1]), len(Car_ServerLists[2])]
             for i in range(len(dynamic_cnt)):
                 dynamic_cnt[i] += 1
@@ -433,7 +436,7 @@ def ProcessSchRes(device_id, car_ServerList):
                 end_points = []
                 # 跳过本次循环
                 continue
-            # 从xls文件读取路网信息
+            # 从xls文件读取路网信息(每次只取一段路径，即一个订单)
             result = FileObj.get_direct_array(start, end)
             distance_total, location_array_total_str, location_array_amap_total_str = [value for value in result.values()]
             location_array_total = GetPathArray(location_array_total_str.split(';'))
@@ -460,7 +463,7 @@ def ProcessSchRes(device_id, car_ServerList):
             # 通过华为云物联网平台下发路径命令（让小车动起来）,car_01是服务空间id
             res = Cloud.SendArrayCommand(device_id, "car_01", location_array_total)
             print(f"{car_id}号车任务及行驶信息下发状态：{res}")
-            # 设置更新3辆小车实时位置的多线程周期性任务(向华为云请求)
+            # 设置更新3辆小车实时位置的多线程周期性任务
             if not initFlag:
                 time.sleep(0.5)
                 if car_id == 1: GetLocation(0.45, device_id_01)
@@ -472,8 +475,8 @@ def ProcessSchRes(device_id, car_ServerList):
             data = {
                 'car_id': car_id,
                 'distance': distance_total,
-                'location_array':location_array_total,
-                'location_array_amap':location_array_amap_total,
+                'location_array':location_array_total,#百度地图数据
+                'location_array_amap':location_array_amap_total,#高德地图数据
                 'PassengerNum': CarLoad
             }
             socketio.emit('send_message', data)
