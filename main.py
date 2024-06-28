@@ -285,7 +285,7 @@ def GetLocation(interval, device_id):
         'location': location,
     }
     socketio.emit('send_message_location', data)
-    #在这里添加代码向unicloud发送小车的位置
+    
 
 
 def CalcuTime_dif(timestamp):
