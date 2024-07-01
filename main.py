@@ -7,10 +7,11 @@ from HuaweiIoT import HuaweiCloudObj
 from time_sys import SystemClock, System_file
 import threading, time
 from points import RodeArray, GetPathArray, GetRealTimeArray
-from tqdm import tqdm
+from tqdm import tqdm#用于循环中显示进度条
 import requests
 import numpy as np
-import xlrd as xd
+import xlrd as xd#读取Excel文件
+from uniCloudapi import post_carid,post_carinfo
 
 """
 动态插入接口 start
@@ -337,6 +338,8 @@ def GetLocation(interval, device_id):
         'location': location,
     }
     socketio.emit('send_message_location', data)
+    #向unicloud跟新小车的位置
+    post_carinfo(car_id,location[1],location[0])
 
 """这个calcutime函数好像没用上。。"""
 def CalcuTime_dif(timestamp):
@@ -414,6 +417,8 @@ def QueryUniCloud(url_count, url_doc):
                 'originId': originId,
                 'destId': destId,
             })
+            #向uniapp发送接单信息（告知接单的小车）
+            post_carid(init_id,insert_car_id)
             Car_ServerLists_Length = [len(Car_ServerLists[0]), len(Car_ServerLists[1]), len(Car_ServerLists[2])]
             for i in range(len(dynamic_cnt)):
                 dynamic_cnt[i] += 1
