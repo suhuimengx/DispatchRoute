@@ -1,4 +1,4 @@
-from flask import Flask, jsonify#jsonify将python转换为json字符串，并创建flask response对象，可直接返回
+from flask import Flask, jsonify
 from flask_cors import CORS
 from flask_socketio import SocketIO, emit
 import time, threading
@@ -14,7 +14,7 @@ socketio = SocketIO(app, cors_allowed_origins='*')
 # 定义路由处理websocket连接
 @app.route('/socket.io/')
 def index():
-    return jsonify({'name':'zhangsan'})
+    return jsonify({})
 
 @socketio.on('connect')
 def test_connect():

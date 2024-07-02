@@ -1,5 +1,5 @@
 import json
-import datetime#处理日期和时间
+import datetime
 from flask import Flask, jsonify
 from flask_cors import CORS
 from flask_socketio import SocketIO
@@ -44,8 +44,10 @@ dataDict['nCustomer'] = len(dataDict['Timewindow']) - 1
 dataDict['ServiceTime'] = 1
 # 最佳个体
 bestInd = [0, 2, 13, 4, 24, 33, 22, 16, 15, 8, 35, 28, 36, 20, 10, 30, 40, 0, 11, 1, 12, 31, 21, 3, 32, 23, 18, 19, 39, 38, 0, 7, 14, 5, 34, 27, 25, 17, 37, 6, 26, 9, 29]
+# data = xd.open_workbook("F:/Lemon/Desktop/HikingUs/DispatchRoute/node_distance_1.xls")
+data = xd.open_workbook("./node_distance_1.xls")
 
-data = xd.open_workbook("B:/flaskproject/DispatchRoute/node_distance_1.xls")
+
 sheet = data.sheet_by_name('Sheet1')
 DijDis = []
 for r in range(sheet.nrows): #将表中数据按行逐步添加到列表中，最后转换为list结构
@@ -63,7 +65,6 @@ DijTime = np.zeros((nNodes,nNodes))
 for i in range(nNodes):
     for j in range(nNodes):
         DijTime[i,j] = DijDis[i][j]/dataDict['speed']
-
 
 # 染色体解码
 def decodeInd(ind):
@@ -188,40 +189,87 @@ def insert(req, bestInd, dataDict):#req按照[起点，目的地，当前时刻�
 """
 
 '''
- 华为云物联网平台客户端配置
+华为云物联网平台客户端配置
 '''
+
+# # 项目id
+# # project_id = "b9a181cca17a4c72874effe2cb82fe0e"
+# project_id = "eb375db7c7674f0e99719592224806ee"
+# # 上海一"cn-east-3"；北京四"cn-north-4"；华南广州"cn-south-4"
+# region_id = "cn-north-4"  # 服务区域
+# # 接入端点
+# # endpoint = "cd5b167852.iot-mqtts.cn-north-4.myhuaweicloud.com"
+# endpoint = "4c3dd8f578.st1.iotda-device.cn-north-4.myhuaweicloud.com"
+
+# # 产品id
+# # product_id = "649a72522a3b1d3de71e9e81"
+# product_id = "66505a617dbfd46fabbd3225"
+
 # 项目id
-project_id = "b9a181cca17a4c72874effe2cb82fe0e"
+# project_id = "b9a181cca17a4c72874effe2cb82fe0e"
+project_id = "eb375db7c7674f0e99719592224806ee"
+
 # 上海一"cn-east-3"；北京四"cn-north-4"；华南广州"cn-south-4"
 region_id = "cn-north-4"  # 服务区域
 # 接入端点
-endpoint = "cd5b167852.iot-mqtts.cn-north-4.myhuaweicloud.com"
+# endpoint = "cd5b167852.iot-mqtts.cn-north-4.myhuaweicloud.com"
+# endpoint = "4c3dd8f578.st1.iotda-device.cn-north-4.myhuaweicloud.com"
+endpoint = "4c3dd8f578.st1.iotda-app.cn-north-4.myhuaweicloud.com"
+
 # 产品id
-product_id = "649a72522a3b1d3de71e9e81"
+# product_id = "649a72522a3b1d3de71e9e81"
+product_id = "66505a617dbfd46fabbd3225"
+
 # 设备id
-device_id_01 = "649a72522a3b1d3de71e9e81_car01"
-device_id_02 = "649a72522a3b1d3de71e9e81_car02"
-device_id_03 = "649a72522a3b1d3de71e9e81_car03"
-device_id_list = [device_id_01, device_id_02, device_id_03]
+# device_id = "649a72522a3b1d3de71e9e81_car01"
+device_id = "66505a617dbfd46fabbd3225_led001"
+
 # 服务id
-service_id = "car_01"
+# service_id = "car_01"
+service_id = "hhhcar1"
+# 设备id
+# device_id_01 = "649a72522a3b1d3de71e9e81_car01"
+# device_id_02 = "649a72522a3b1d3de71e9e81_car02"
+# device_id_03 = "649a72522a3b1d3de71e9e81_car03"
+# device_id_list = [device_id_01, device_id_02, device_id_03]
+
+device_id_01 = "66505a617dbfd46fabbd3225_led001"
+device_id_02 = "66505a617dbfd46fabbd3225_car02"
+device_id_03 = "66505a617dbfd46fabbd3225_car03"
+device_id_list = [device_id_01, device_id_02, device_id_03]
+
+# 服务id
+# service_id = "car_01"
+service_id = "hhhcar1"
+
 
 # 初始化华为云IOT对象
 Cloud = HuaweiCloudObj(project_id, region_id, endpoint)
 
 # 初始化系统时钟对象
-Clock = SystemClock(0.325) # 0.065 -> 1s;3.9 -> 1min
+Clock = SystemClock(0.325) # 0.065 -> 1s; 3.9 -> 1min
 # 初始化系统文件对象
 FileObj = System_file("./路径距离.xls")
+
 # uniCloud云服务空间url
+# uni_url_count = "https://fc-mp-9807717d-5acc-468e-a8a2-2b6850a56613.next.bspapp.com/getcount"
+# uni_url_doc = "https://fc-mp-9807717d-5acc-468e-a8a2-2b6850a56613.next.bspapp.com/downdata"
+# uni_url_id = ("https://fc-mp-9807717d-5acc-468e-a8a2-2b6850a56613.next.bspapp.com/getold")
+
+# uni_url_count = "https://fc-mp-799372a1-cb92-40f1-8736-2de08a0afe18.next.bspapp.com/getcount"
+# uni_url_doc = "https://fc-mp-799372a1-cb92-40f1-8736-2de08a0afe18.next.bspapp.com/downdata"
+# uni_url_id = ("https://fc-mp-799372a1-cb92-40f1-8736-2de08a0afe18.next.bspapp.com/getold")
 uni_url_count = "https://fc-mp-e8d46985-e50c-4bfb-af14-d4dfd054e7b5.next.bspapp.com/getCount"
 uni_url_doc = "https://fc-mp-e8d46985-e50c-4bfb-af14-d4dfd054e7b5.next.bspapp.com/downloadData"
 uni_url_id = ("https://fc-mp-e8d46985-e50c-4bfb-af14-d4dfd054e7b5.next.bspapp.com/getOld")
-
 # 系统开始运行时 数据库中的数据量
 init_count = json.loads(requests.get(uni_url_count).text)["total"]
+print(init_count)
 # 获取数据库中最后一个订单的id
+init_id = json.loads(requests.get(uni_url_id, {"num":init_count}).text)
+print(init_id)
 init_id = json.loads(requests.get(uni_url_id, {"num":init_count}).text)["data"][0]["_id"]
+
 
 
 # 三辆车的派送结果
@@ -244,6 +292,7 @@ socketio = SocketIO(app, cors_allowed_origins='*')
 
 # 定义路由处理websocket连接
 @app.route('/socket.io/')
+# @app.route('/sss')
 def socket():
     return jsonify({})
 
@@ -255,6 +304,7 @@ def socket_connect():
     print('client connected')
     # 设置调度任务分别下发给三个小车的多线程任务
     for i in range(len(Car_ServerLists)):
+        # threading.Thread()就是执行多线程任务，target是对应函数，args就是该函数所要求的参数
         thread = threading.Thread(target=ProcessSchRes, args=(device_id_list[i], Car_ServerLists[i]))
         thread.start()
     uni_thread = threading.Thread(target=QueryUniCloud, args=(uni_url_count, uni_url_doc))
@@ -272,6 +322,7 @@ def GetLocation(interval, device_id):
     @param device_id: 要更新实时位置的设备id
     @param interval: 更新实时位置的周期间隔
     """
+    # 第一个参数是间隔时间，第二是是执行的函数，也就是说间隔interval时间之后执行GetLocation函数
     t = threading.Timer(interval, GetLocation, args=[interval, device_id])
     t.start()
     location = Cloud.GetDeviceLocation(device_id)
@@ -290,6 +341,7 @@ def GetLocation(interval, device_id):
     #向unicloud跟新小车的位置
     post_carinfo(car_id,location[1],location[0])
 
+"""这个calcutime函数好像没用上。。"""
 def CalcuTime_dif(timestamp):
     """
     通过时间戳获取在系统参考系中的时间
@@ -319,11 +371,23 @@ def QueryUniCloud(url_count, url_doc):
         if current_count > init_count:
             time.sleep(1)
             print("=============收到实时需求=============")
-            new_doc = json.loads(requests.get(url_doc, {
-                "old_id": init_id,
-            }, timeout=3).text)["data"][0]
+
+            # print(json.loads(requests.get(url_doc, {
+            #     "old_id": init_id,
+            # }, timeout=3).text))
+
+            
+            # new_doc = json.loads(requests.get(url_doc, {
+            #     "old_id": init_id,
+            # }, timeout=3).text)["data"][0]
+
             # 更新状态量
             init_count += 1
+
+            new_doc = json.loads(requests.get(uni_url_id, {"num":init_count}).text)["data"][0]
+
+            print(new_doc)
+
             init_id = new_doc["_id"]
             originId = int(new_doc["originId"])
             destId = int(new_doc["destId"])
@@ -331,7 +395,7 @@ def QueryUniCloud(url_count, url_doc):
             originTime = Clock.get_current_ConvertedTime()
             originTime_latest = originTime + new_doc["waitTime"]
             # destTime = CalcuTime_dif(new_doc["ArrivalTime"])
-            destTime = originTime_latest + 8  #这里为什么加了一个常数8？？？？？？？？？
+            destTime = originTime_latest + 8
             numDemand = new_doc["numDemand"]
             req = [originId, destId, originTime, originTime_latest, destTime, numDemand]
             print("需求信息：",req)
@@ -348,7 +412,6 @@ def QueryUniCloud(url_count, url_doc):
                 insert_car_id = 2
             else:
                 insert_car_id = 3
-            #此处往前端发送的实时信息只有小车id和起始位置id
             socketio.emit("send_message_realtimeDemand", {
                 'car_id': insert_car_id,
                 'originId': originId,
@@ -430,13 +493,12 @@ def ProcessSchRes(device_id, car_ServerList):
                     'various_num': increase_load,
                     'time_stamp': Clock.get_current_time(),
                 }
-                #这里不是很懂
                 socketio.emit('send_message_carLoad', message)
                 start_points = end_points
                 end_points = []
                 # 跳过本次循环
                 continue
-            # 从xls文件读取路网信息(每次只取一段路径，即一个订单)
+            # 从xls文件读取路网信息
             result = FileObj.get_direct_array(start, end)
             distance_total, location_array_total_str, location_array_amap_total_str = [value for value in result.values()]
             location_array_total = GetPathArray(location_array_total_str.split(';'))
@@ -460,8 +522,10 @@ def ProcessSchRes(device_id, car_ServerList):
             }
             socketio.emit('send_message_carLoad', message)
             print(f"{car_id}号车辆 载客数: {CarLoad}", start_points, end_points, start, end, "系统时钟：", Clock.get_current_ConvertedTime())
-            # 通过华为云物联网平台下发路径命令（让小车动起来）,car_01是服务空间id
-            res = Cloud.SendArrayCommand(device_id, "car_01", location_array_total)
+            # 通过华为云物联网平台下发路径命令
+            # res = Cloud.SendArrayCommand(device_id, "car_01", location_array_total)
+            res = Cloud.SendArrayCommand(device_id, "hhhcar1", location_array_total)
+
             print(f"{car_id}号车任务及行驶信息下发状态：{res}")
             # 设置更新3辆小车实时位置的多线程周期性任务
             if not initFlag:
@@ -475,13 +539,12 @@ def ProcessSchRes(device_id, car_ServerList):
             data = {
                 'car_id': car_id,
                 'distance': distance_total,
-                'location_array':location_array_total,#百度地图数据
-                'location_array_amap':location_array_amap_total,#高德地图数据
+                'location_array':location_array_total,
+                'location_array_amap':location_array_amap_total,
                 'PassengerNum': CarLoad
             }
             socketio.emit('send_message', data)
-            # 此处可以加向小程序发送消息的函数
-            # 如何判断可以继续下发下一跳分段路径?  车不停就一直在这个循环中
+            # 如何判断可以继续下发下一跳分段路径?
             while not CarStopFlag:
                 property_flag = Cloud.GetDeviceFlag(device_id)
                 if property_flag == 1:
@@ -512,7 +575,8 @@ def ProcessSchRes(device_id, car_ServerList):
 
 
 if __name__ == '__main__':
-    socketio.run(app, port=5000, allow_unsafe_werkzeug=True)
+    # socketio.run(app, host='0.0.0.0',port=5000, allow_unsafe_werkzeug=True)
+    socketio.run(app,port=5000, allow_unsafe_werkzeug=True)
 
 
 
