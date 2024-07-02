@@ -12,6 +12,7 @@ import requests
 import numpy as np
 import xlrd as xd#读取Excel文件
 from uniCloudapi import post_carid,post_carinfo
+from bdmapTotxmap import bdmapTotxmap
 
 """
 动态插入接口 start
@@ -338,8 +339,10 @@ def GetLocation(interval, device_id):
         'location': location,
     }
     socketio.emit('send_message_location', data)
-    #向unicloud跟新小车的位置
-    post_carinfo(car_id,location[1],location[0])
+    #将百度地图坐标转换成腾讯地图的坐标并更新到uniCloud
+    location_bd = {"latitude":location[1],"longitude":location[0]}
+    location_tx = bdmapTotxmap(location_bd)
+    post_carinfo(car_id,location_tx.latitude,location_tx.longitude)
 
 """这个calcutime函数好像没用上。。"""
 def CalcuTime_dif(timestamp):

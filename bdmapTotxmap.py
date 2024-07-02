@@ -18,7 +18,7 @@ def bdmapTotxmap(location):
     lat = z * math.sin(theta)
     
     # 返回数据给客户端
-    result = {'lng': lng, 'lat': lat}
+    result = {'longitude': lng, 'latitude': lat}
     #print(result)
     return result
 '''
