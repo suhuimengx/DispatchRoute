@@ -3,7 +3,7 @@ import numpy as np
 
 
 
-data = xd.open_workbook("F:/Lemon/Desktop/HikingUs/DispatchRoute/node_distance_1.xls")
+data = xd.open_workbook("B:/flaskproject/DispatchRoute/node_distance_1.xls")
 sheet = data.sheet_by_name('Sheet1')
 DijDis = []
 for r in range(sheet.nrows): #将表中数据按行逐步添加到列表中，最后转换为list结构

@@ -30,7 +30,7 @@ def post_carinfo(car_id,latitude,longitude):
     except requests.RequestException as e:
         print(f"An error occurred: {e}")
 
-def post_carid(orderid,car_id):
+def post_carid(orderid,car_id,server_id):
     '''
     发送报文同步订单分配的小车信息
     @param:orderid:订单id
@@ -41,7 +41,8 @@ def post_carid(orderid,car_id):
         "info": 
             {
                 "car_id":car_id,
-                "order_id":orderid
+                "order_id":orderid,
+                "server_id":server_id
             }
         }
     try:
@@ -52,3 +53,26 @@ def post_carid(orderid,car_id):
     
     except requests.RequestException as e:
         print(f"An error occurred: {e}")
+
+def post_serverid(car_id,server_id):
+    '''
+    发送报文更新UniCloud的小车服务对象
+    @param:car_id:小车id
+    @param:server_id:小车本段路径的服务对象（数组）
+    '''
+    url = "https://fc-mp-e8d46985-e50c-4bfb-af14-d4dfd054e7b5.next.bspapp.com/updateServerId"
+    data = {
+        "info": 
+            {
+                "car_id":car_id,
+                "server_id":server_id
+            }
+        }
+    try:
+        # 发送POST请求
+        response = requests.post(url, json=data)
+        
+        print(response.json())
+    
+    except requests.RequestException as e:
+        print(f"An error occurred: {e}")   

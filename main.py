@@ -11,7 +11,7 @@ from tqdm import tqdm#用于循环中显示进度条
 import requests
 import numpy as np
 import xlrd as xd#读取Excel文件
-from uniCloudapi import post_carid,post_carinfo
+from uniCloudapi import post_carid,post_carinfo,post_serverid
 from bdmapTotxmap import bdmapTotxmap
 
 """
@@ -26,7 +26,7 @@ myCustomer = [20, 20, 20]
 静态共乘调度结果
 '''
 dataDict = {}
-# 时间窗
+# 时间窗:[期望出行时间，最晚出行时间，期望到达时间]
 dataDict["Timewindow"] = [
     [0,0,0],
     [0, 10, 20], [0, 10, 20], [5, 15, 25], [5, 15, 25], [10, 25, 35], [10, 25, 35], [10, 25, 35], [15, 25, 40], [20, 30, 40], [20, 30, 40], [0, 10, 20], [0, 10, 20], [0, 10, 20], [5, 15, 30], [10, 20, 30], [15, 25, 35], [15, 25, 35], [20, 30, 40],[20, 30, 35], [20, 30, 40]
@@ -41,7 +41,9 @@ dataDict["Demand"] = [0,
              1, 2, 2, 2, 2, 2, 3, 1, 2, 3, 1, 2, 3, 1, 2, 2, 2, 2, 1, 3,
              -1, -2, -2, -2, -2, -2, -3, -1, -2, -3, -1, -2, -3, -1, -2, -2, -2, -2, -1, -3]
 dataDict['MaxLoad'] = 7
+#总的订单数
 dataDict['nCustomer'] = len(dataDict['Timewindow']) - 1
+#在每个上车点等待的时间
 dataDict['ServiceTime'] = 1
 # 最佳个体
 bestInd = [0, 2, 13, 4, 24, 33, 22, 16, 15, 8, 35, 28, 36, 20, 10, 30, 40, 0, 11, 1, 12, 31, 21, 3, 32, 23, 18, 19, 39, 38, 0, 7, 14, 5, 34, 27, 25, 17, 37, 6, 26, 9, 29]
@@ -61,18 +63,18 @@ for i in range(len(DijDis)):
         DijDis[i][j]=DijDis[j][i]
 nNodes=len(DijDis)
 dataDict['speed'] = 1000/3 #车速为20km/h
-nSAV = 3
+nSAV = 3#车辆数量
 DijTime = np.zeros((nNodes,nNodes))
 for i in range(nNodes):
     for j in range(nNodes):
-        DijTime[i,j] = DijDis[i][j]/dataDict['speed']
+        DijTime[i,j] = DijDis[i][j]/dataDict['speed']#根据路线距离计算出路线耗时
 
 # 染色体解码
 def decodeInd(ind):
     '''从染色体解码回路线片段，每条路径都是以0为开头'''
     indCopy = ind.copy() # 复制ind，防止直接对染色体进行改动
     indCopy.append(0)
-    zeroIdx = [x for x, y in list(enumerate(indCopy)) if y == 0]
+    zeroIdx = [x for x, y in list(enumerate(indCopy)) if y == 0]#找到值为0对应的索引
     routes = []
     for i,j in zip(zeroIdx[0::], zeroIdx[1::]):
         routes.append(ind[i:j])
@@ -113,8 +115,8 @@ def calcuRouteServiceTime(route, dataDict = dataDict):
             arrivalTime += dataDict['ServiceTime']
         arrivalTime += DijTime[dataDict['NodeCoor'][route[i-1]]][dataDict['NodeCoor'][route[i]]]
         if route[i] <= dataDict['nCustomer']:
-            arrivalTime = max(arrivalTime, dataDict['Timewindow'][route[i]][0])
-        serviceTime[i] = arrivalTime
+            arrivalTime = max(arrivalTime, dataDict['Timewindow'][route[i]][0])#如果用户期望到达时间更晚，则将规划到达时间设置为用户期望到达时间
+        serviceTime[i] = arrivalTime # 对于在同一节点的订单，只有第一个订单考虑到达时间，后面的置0
     return  serviceTime
 
 def timeTable(distributionPlan, dataDict = dataDict):
@@ -149,7 +151,7 @@ def insert(req, bestInd, dataDict):#req按照[起点，目的地，当前时刻�
     #首先先把起点目的地，时间窗插入到原来的集合数组里
     for i in range(len(bestInd)):
         if bestInd[i]>dataDict['nCustomer']:
-            bestInd[i] += 1
+            bestInd[i] += 1 # 将所有大于当前订单数的编码加一
     dataDict['nCustomer'] += 1
     dataDict['NodeCoor'].insert(dataDict['nCustomer'], req[0])
     dataDict['NodeCoor'].append(req[1])
@@ -157,16 +159,18 @@ def insert(req, bestInd, dataDict):#req按照[起点，目的地，当前时刻�
     dataDict['Demand'].insert(dataDict['nCustomer'], req[5])
     dataDict['Demand'].append(-req[5])
     distributionPlan = decodeInd(bestInd)
-    bestEva = float("inf")
+    bestEva = float("inf") # 初始化为正无穷大
     for i in range(len(distributionPlan)):
         # 遍历三辆车
         Plan_copy = distributionPlan.copy()
-        indexo = ArriveCar[i] + 1
+        indexo = ArriveCar[i] + 1 # 
+        # 小车即将到达终点时
         if indexo == distributionPlan[i][-1]:
             Plan_copy[i].append(dataDict['nCustomer'])
             Plan_copy[i].append(2*dataDict['nCustomer'])
             betterInd = combineInd(Plan_copy)
             betterEva = panevaluate(betterInd)
+        # 离终点还有多段路径
         else:
             betterEva = float("inf")
             routeEva = float("inf")
@@ -342,9 +346,8 @@ def GetLocation(interval, device_id):
     #将百度地图坐标转换成腾讯地图的坐标并更新到uniCloud
     location_bd = {"latitude":location[1],"longitude":location[0]}
     location_tx = bdmapTotxmap(location_bd)
-    post_carinfo(car_id,location_tx.latitude,location_tx.longitude)
+    post_carinfo(car_id,location_tx['latitude'],location_tx['longitude'])
 
-"""这个calcutime函数好像没用上。。"""
 def CalcuTime_dif(timestamp):
     """
     通过时间戳获取在系统参考系中的时间
@@ -396,6 +399,7 @@ def QueryUniCloud(url_count, url_doc):
             destId = int(new_doc["destId"])
             # originTime = CalcuTime_dif(new_doc["DepartureTime"])
             originTime = Clock.get_current_ConvertedTime()
+            #最晚出发时间=期望出行时间+最长等待时间
             originTime_latest = originTime + new_doc["waitTime"]
             # destTime = CalcuTime_dif(new_doc["ArrivalTime"])
             destTime = originTime_latest + 8
@@ -421,7 +425,9 @@ def QueryUniCloud(url_count, url_doc):
                 'destId': destId,
             })
             #向uniapp发送接单信息（告知接单的小车）
-            post_carid(init_id,insert_car_id)
+            post_carid(init_id,insert_car_id,dataDict["nCustomer"])
+            #在这发送小车编码的序号 dataDict["nCustomer"]
+
             Car_ServerLists_Length = [len(Car_ServerLists[0]), len(Car_ServerLists[1]), len(Car_ServerLists[2])]
             for i in range(len(dynamic_cnt)):
                 dynamic_cnt[i] += 1
@@ -438,8 +444,8 @@ def ProcessSchRes(device_id, car_ServerList):
     global dataDict, Car_ServerLists, Car_ServerLists_Length
     global dynamic_cnt, previous_cnt, myCustomer
     index = 1
-    start_points = []
-    end_points = []
+    start_points = []#代表本段路径的起点对应的编码
+    end_points = []#代表本段路径终点对应的编码，此编码不一定代表下车，也有可能是去其他标定点接新的乘客
     CarLoad = 0
     CarStopFlag = False
     initFlag = False
@@ -447,9 +453,10 @@ def ProcessSchRes(device_id, car_ServerList):
     car_ServerList = Car_ServerLists[car_id - 1]
     # 获取初始出发点
     start_points.append(car_ServerList[0])
+    #如果在本段路径的起点分配了多个订单（对应Datadict【Nodecoor】相邻的相同节点），则将这些订单一起接上车
     while dataDict["NodeCoor"][start_points[-1]] == dataDict["NodeCoor"][car_ServerList[index]]:
         start_points.append(car_ServerList[index])
-        index += 1
+        index += 1#index始终比本段路径分配的订单在ServerList大1
     while True:
         # 解析完整行驶路线，根据车辆行驶状态更新出发点和目标点
         # if index < len(car_ServerList):
@@ -463,7 +470,7 @@ def ProcessSchRes(device_id, car_ServerList):
                 previous_cnt[car_id - 1] = dynamic_cnt[car_id - 1]
             car_ServerList = Car_ServerLists[car_id - 1]
             print(Car_ServerLists_Length[car_id - 1])
-            # 获取同终点的订单集合
+            # 获取同终点的订单集合(将起点接到的订单后一位编码的对应标定点作为本段路径的终点，实际本段路径不一定下乘客，也可能是去接其他乘客)
             end_points.append(car_ServerList[index])
             index += 1
             if index < len(car_ServerList):
@@ -471,16 +478,17 @@ def ProcessSchRes(device_id, car_ServerList):
                     end_points.append(car_ServerList[index])
                     index += 1
                     if index >= Car_ServerLists_Length[car_id - 1]: break
-            # 记录小车即将到达的终点
+            # 记录小车即将到达的终点(可能是下一个订单的起始点，也可能是目前车上订单的终点)
             ArriveCar[car_id - 1] = car_ServerList.index(end_points[-1])
             # 获取本次行程可出发时间
             departure_time = 0
             for point in start_points:
                 if point <= dataDict["nCustomer"]:
                     if dataDict["Timewindow"][point][0] > departure_time: departure_time = dataDict["Timewindow"][point][0]
-            # 获取本段路的出发点和到达点
+            # 获取本段路的出发点和到达点(如果不存在同终点，end_points在Serverlist对应index=start_points对应index+1)
             start = dataDict["NodeCoor"][start_points[-1]]
             end = dataDict["NodeCoor"][end_points[-1]]
+
             # 处理动态插入bug：插入到了即将到达的点
             if start == end:
                 increase_load = 0
@@ -501,6 +509,7 @@ def ProcessSchRes(device_id, car_ServerList):
                 end_points = []
                 # 跳过本次循环
                 continue
+
             # 从xls文件读取路网信息
             result = FileObj.get_direct_array(start, end)
             distance_total, location_array_total_str, location_array_amap_total_str = [value for value in result.values()]
@@ -525,6 +534,10 @@ def ProcessSchRes(device_id, car_ServerList):
             }
             socketio.emit('send_message_carLoad', message)
             print(f"{car_id}号车辆 载客数: {CarLoad}", start_points, end_points, start, end, "系统时钟：", Clock.get_current_ConvertedTime())
+            
+            #向UniCloud同步本段服务对象
+            post_serverid(car_id,start_points)
+
             # 通过华为云物联网平台下发路径命令
             # res = Cloud.SendArrayCommand(device_id, "car_01", location_array_total)
             res = Cloud.SendArrayCommand(device_id, "hhhcar1", location_array_total)
@@ -547,7 +560,7 @@ def ProcessSchRes(device_id, car_ServerList):
                 'PassengerNum': CarLoad
             }
             socketio.emit('send_message', data)
-            # 如何判断可以继续下发下一跳分段路径?
+            # 如何判断可以继续下发下一跳分段路径?当对应小车已经运动到本段路径终点，将stopflag置true
             while not CarStopFlag:
                 property_flag = Cloud.GetDeviceFlag(device_id)
                 if property_flag == 1:
@@ -558,7 +571,7 @@ def ProcessSchRes(device_id, car_ServerList):
             CarStopFlag = False
             # 刷新下车后的载客量
             decrease_load = 0
-            for point in end_points:
+            for point in end_points:#end_points里不一定都是下车！如果end_points全是上车的，这里下车的数量为0？
                 if dataDict["Demand"][point] < 0:
                     decrease_load += dataDict["Demand"][point]
             CarLoad += decrease_load
@@ -570,7 +583,7 @@ def ProcessSchRes(device_id, car_ServerList):
                 'time_stamp': Clock.get_current_time(),
             }
             socketio.emit('send_message_carLoad', message)
-            start_points = end_points
+            start_points = end_points#如果end_points里有上车的，会在下一个循环里与前端同步
             end_points = []
             time.sleep(0.5)
             # 刷新路线片段

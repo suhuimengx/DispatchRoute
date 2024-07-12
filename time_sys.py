@@ -2,6 +2,7 @@ import time, threading
 from datetime import datetime, timedelta
 import xlrd
 
+#生成时钟对象，从当前日期的7:20开始，每0.325秒更新一次，定义了当前时间的属性，是相对于7:20开始的，更新频率是interval
 class SystemClock:
     def __init__(self, interval):
         self.begin_time = datetime(datetime.today().year,datetime.today().month, datetime.today().day, 7, 20)
@@ -26,6 +27,7 @@ class SystemClock:
         # 读取时分秒
         return real_time.strftime('%H:%M:%S')
 
+    # 得到当前系统运行的时间，以分钟为单位（目的是与时间窗单位对齐）
     def get_current_ConvertedTime(self):
         return (self.current_time -self.begin_time).seconds // 60
 
