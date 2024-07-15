@@ -11,7 +11,7 @@ from tqdm import tqdm#用于循环中显示进度条
 import requests
 import numpy as np
 import xlrd as xd#读取Excel文件
-from uniCloudapi import post_carid,post_carinfo,post_serverid
+from uniCloudapi import post_carid,post_carinfo,post_serverid,post_updateCSL
 from bdmapTotxmap import bdmapTotxmap
 
 """
@@ -406,9 +406,12 @@ def QueryUniCloud(url_count, url_doc):
             numDemand = new_doc["numDemand"]
             req = [originId, destId, originTime, originTime_latest, destTime, numDemand]
             print("需求信息：",req)
+            #先更新unicloud接单小车的服务列表，避免插入后数据库更新不及时
+            post_updateCSL(dataDict['nCustomer'])
+
             # dataDict为引用传递，调用函数时自动修改
             bestInd, fitness = insert(req, bestInd, dataDict)
-            print(bestInd, fitness, dataDict["nCustomer"])
+            print("bestInd: ",bestInd, "fitness: ",fitness,"dataDict[nCustomer]: ", dataDict["nCustomer"])
             # 刷新车辆服务列表
             Car_ServerLists = decodeInd(bestInd)
             # 前端显示实时订单由哪个车辆服务
@@ -424,13 +427,15 @@ def QueryUniCloud(url_count, url_doc):
                 'originId': originId,
                 'destId': destId,
             })
-            #向uniapp发送接单信息（告知接单的小车）
-            post_carid(init_id,insert_car_id,dataDict["nCustomer"])
-            #在这发送小车编码的序号 dataDict["nCustomer"]
 
             Car_ServerLists_Length = [len(Car_ServerLists[0]), len(Car_ServerLists[1]), len(Car_ServerLists[2])]
             for i in range(len(dynamic_cnt)):
                 dynamic_cnt[i] += 1
+
+            #向uniapp发送接单信息（告知接单的小车）
+            post_carid(init_id,insert_car_id,dataDict["nCustomer"])
+
+
         time.sleep(2.5)
         
 
@@ -468,8 +473,9 @@ def ProcessSchRes(device_id, car_ServerList):
                         start_points[point_index] += 1
                 myCustomer[car_id - 1] = dataDict["nCustomer"]
                 previous_cnt[car_id - 1] = dynamic_cnt[car_id - 1]
+                print("位置1发生变动")
             car_ServerList = Car_ServerLists[car_id - 1]
-            print(Car_ServerLists_Length[car_id - 1])
+            # print(Car_ServerLists_Length[car_id - 1])
             # 获取同终点的订单集合(将起点接到的订单后一位编码的对应标定点作为本段路径的终点，实际本段路径不一定下乘客，也可能是去接其他乘客)
             end_points.append(car_ServerList[index])
             index += 1
@@ -504,7 +510,10 @@ def ProcessSchRes(device_id, car_ServerList):
                     'various_num': increase_load,
                     'time_stamp': Clock.get_current_time(),
                 }
+                print(car_id+"号车人数变动:"+increase_load)
                 socketio.emit('send_message_carLoad', message)
+                post_serverid(car_id,start_points)
+
                 start_points = end_points
                 end_points = []
                 # 跳过本次循环
@@ -517,7 +526,22 @@ def ProcessSchRes(device_id, car_ServerList):
             location_array_amap_total = GetPathArray(location_array_amap_total_str.split(';'))
             # 判断是否已达到可出发时间，否则阻塞该线程
             while departure_time > Clock.get_current_ConvertedTime():
-                time.sleep(0.1)
+                time.sleep(0.1)#可能是阻塞在这个状态里，此时新订单到来了，下发的消息来不及更新
+            
+            # 若动态插入端出现变动，及时做出响应
+            if dynamic_cnt[car_id - 1] != previous_cnt[car_id - 1]:
+                for point_index in range(len(start_points)):
+                    if start_points[point_index] > myCustomer[car_id - 1]:
+                        start_points[point_index] += 1
+                for point_index1 in range(len(end_points)):
+                    if end_points[point_index1] > myCustomer[car_id - 1]:
+                        end_points[point_index1] += 1
+                myCustomer[car_id - 1] = dataDict["nCustomer"]
+                previous_cnt[car_id - 1] = dynamic_cnt[car_id - 1]
+                print("位置2发生变动")
+            car_ServerList = Car_ServerLists[car_id - 1]
+            # print(Car_ServerLists_Length[car_id - 1])
+            
             # 刷新上车后的载客量
             increase_load = 0
             for point in start_points:
@@ -533,11 +557,11 @@ def ProcessSchRes(device_id, car_ServerList):
                 'time_stamp': Clock.get_current_time(),
             }
             socketio.emit('send_message_carLoad', message)
-            print(f"{car_id}号车辆 载客数: {CarLoad}", start_points, end_points, start, end, "系统时钟：", Clock.get_current_ConvertedTime())
+            print(f"{car_id}号车辆 载客数: {CarLoad}", start_points, end_points, start, end, "系统时钟：", Clock.get_current_ConvertedTime())#start是本段路径开始的节点，start_points是本段路径的服务对象
             
-            #向UniCloud同步本段服务对象
+            #向UniCloud同步本段服务对象(不排除因为同步发post导致阻塞)
             post_serverid(car_id,start_points)
-
+            print("更新小车服务对象",start_points)
             # 通过华为云物联网平台下发路径命令
             # res = Cloud.SendArrayCommand(device_id, "car_01", location_array_total)
             res = Cloud.SendArrayCommand(device_id, "hhhcar1", location_array_total)
@@ -569,6 +593,24 @@ def ProcessSchRes(device_id, car_ServerList):
                     # print(f"{car_id}号车辆状态重置：",res)
                     time.sleep(2.5)
             CarStopFlag = False
+
+
+            # 若动态插入端出现变动，及时做出响应（下车点或许也要改一下）
+                        # 若动态插入端出现变动，及时做出响应
+            if dynamic_cnt[car_id - 1] != previous_cnt[car_id - 1]:
+                for point_index in range(len(start_points)):
+                    if start_points[point_index] > myCustomer[car_id - 1]:
+                        start_points[point_index] += 1
+                for point_index1 in range(len(end_points)):
+                    if end_points[point_index1] > myCustomer[car_id - 1]:
+                        end_points[point_index1] += 1
+                myCustomer[car_id - 1] = dataDict["nCustomer"]
+                previous_cnt[car_id - 1] = dynamic_cnt[car_id - 1]
+                print("位置3发生变动")
+            car_ServerList = Car_ServerLists[car_id - 1]
+            # print(Car_ServerLists_Length[car_id - 1])
+
+
             # 刷新下车后的载客量
             decrease_load = 0
             for point in end_points:#end_points里不一定都是下车！如果end_points全是上车的，这里下车的数量为0？

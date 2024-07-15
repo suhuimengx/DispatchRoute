@@ -25,7 +25,7 @@ def post_carinfo(car_id,latitude,longitude):
         # 发送POST请求
         response = requests.post(url, json=data)
         
-        print(response.json())
+        #print(response.json())
     
     except requests.RequestException as e:
         print(f"An error occurred: {e}")
@@ -49,7 +49,7 @@ def post_carid(orderid,car_id,server_id):
         # 发送POST请求
         response = requests.post(url, json=data)
         
-        print(response.json())
+        #print(response.json())
     
     except requests.RequestException as e:
         print(f"An error occurred: {e}")
@@ -72,7 +72,27 @@ def post_serverid(car_id,server_id):
         # 发送POST请求
         response = requests.post(url, json=data)
         
-        print(response.json())
+        #print(response.json())
     
     except requests.RequestException as e:
         print(f"An error occurred: {e}")   
+
+def post_updateCSL(nCustomer):
+    '''
+    更新接单小车服务对象
+    '''
+    url = 'https://fc-mp-e8d46985-e50c-4bfb-af14-d4dfd054e7b5.next.bspapp.com/updateCSL'
+    data = {
+        "info":
+        {
+            "nCustomer":nCustomer
+        }
+    }
+    try:
+        # 发送POST请求
+        response = requests.post(url, json=data)
+        
+        #print(response.json())
+    
+    except requests.RequestException as e:
+        print(f"An error occurred: {e}")
