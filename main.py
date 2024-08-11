@@ -456,6 +456,7 @@ def ProcessSchRes(device_id, car_ServerList):
     initFlag = False
     car_id = 1 if device_id == device_id_01 else (2 if device_id == device_id_02 else 3)
     car_ServerList = Car_ServerLists[car_id - 1]
+    need_send_flag = True
     # 获取初始出发点
     start_points.append(car_ServerList[0])
     #如果在本段路径的起点分配了多个订单（对应Datadict【Nodecoor】相邻的相同节点），则将这些订单一起接上车
@@ -466,6 +467,7 @@ def ProcessSchRes(device_id, car_ServerList):
         # 解析完整行驶路线，根据车辆行驶状态更新出发点和目标点
         # if index < len(car_ServerList):
         if index < Car_ServerLists_Length[car_id - 1]:
+            need_send_flag = True
             # 若动态插入端出现变动，及时做出响应
             if dynamic_cnt[car_id - 1] != previous_cnt[car_id - 1]:
                 for point_index in range(len(start_points)):
@@ -510,9 +512,12 @@ def ProcessSchRes(device_id, car_ServerList):
                     'various_num': increase_load,
                     'time_stamp': Clock.get_current_time(),
                 }
-                print(car_id+"号车人数变动:"+increase_load)
+                print("解决动态插入bug")
                 socketio.emit('send_message_carLoad', message)
-                post_serverid(car_id,start_points)
+                #令数组start_points中的所有数据中大于dataDict["nCustomer"]的数据减去dataDict["nCustomer"]，并取反,方便小程序做判断
+                sevice_points = [(-point + dataDict["nCustomer"]) if point > dataDict["nCustomer"] else point for point in start_points]
+                post_serverid(car_id,sevice_points)
+                print("更新小车服务对象",sevice_points)
 
                 start_points = end_points
                 end_points = []
@@ -529,7 +534,7 @@ def ProcessSchRes(device_id, car_ServerList):
                 time.sleep(0.1)#可能是阻塞在这个状态里，此时新订单到来了，下发的消息来不及更新
             
             # 若动态插入端出现变动，及时做出响应
-            if dynamic_cnt[car_id - 1] != previous_cnt[car_id - 1]:
+            if dynamic_cnt[car_id - 1] != previous_cnt[car_id - 1]:  
                 for point_index in range(len(start_points)):
                     if start_points[point_index] > myCustomer[car_id - 1]:
                         start_points[point_index] += 1
@@ -560,12 +565,14 @@ def ProcessSchRes(device_id, car_ServerList):
             print(f"{car_id}号车辆 载客数: {CarLoad}", start_points, end_points, start, end, "系统时钟：", Clock.get_current_ConvertedTime())#start是本段路径开始的节点，start_points是本段路径的服务对象
             
             #向UniCloud同步本段服务对象(不排除因为同步发post导致阻塞)
-            post_serverid(car_id,start_points)
-            print("更新小车服务对象",start_points)
+            #令数组start_points中的所有数据中大于dataDict["nCustomer"]的数据减去dataDict["nCustomer"]，并取反,方便小程序做判断
+            sevice_points = [(-point + dataDict["nCustomer"]) if point > dataDict["nCustomer"] else point for point in start_points]
+            post_serverid(car_id,sevice_points)
+            print("更新小车服务对象",sevice_points)
             # 通过华为云物联网平台下发路径命令
             # res = Cloud.SendArrayCommand(device_id, "car_01", location_array_total)
             res = Cloud.SendArrayCommand(device_id, "hhhcar1", location_array_total)
-
+            
             print(f"{car_id}号车任务及行驶信息下发状态：{res}")
             # 设置更新3辆小车实时位置的多线程周期性任务
             if not initFlag:
@@ -630,7 +637,16 @@ def ProcessSchRes(device_id, car_ServerList):
             time.sleep(0.5)
             # 刷新路线片段
             car_ServerList = Car_ServerLists[car_id - 1]
-
+        if index == Car_ServerLists_Length[car_id - 1]:
+            # 确保最后一个订单正确结束
+            if(need_send_flag):
+                # 向UniCloud同步本段服务对象
+                # 令数组start_points中的所有数据中大于dataDict["nCustomer"]的数据减去dataDict["nCustomer"]，并取反,方便小程序做判断
+                sevice_points = [(-point + dataDict["nCustomer"]) if point > dataDict["nCustomer"] else point for point in start_points]
+                post_serverid(car_id,sevice_points)
+                print("更新小车服务对象",sevice_points)
+                need_send_flag = False
+            
 
 if __name__ == '__main__':
     # socketio.run(app, host='0.0.0.0',port=5000, allow_unsafe_werkzeug=True)
