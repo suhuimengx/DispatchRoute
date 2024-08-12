@@ -285,7 +285,9 @@ Car_ServerLists_Length = [len(Car_ServerLists[0]), len(Car_ServerLists[1]), len(
 #     [0, 11, 1, 12, 31, 21, 3, 32, 23, 18, 19, 39, 38],
 #     [0, 7, 14, 5, 34, 27, 25, 17, 37, 6, 26, 9, 29],
 # ]
-
+#三辆车的连接状态
+devices_offline = [False, False, False]
+    
 '''
 数字孪生端websocket服务创建
 '''
@@ -320,6 +322,19 @@ def socket_connect():
 def test_disconnect():
     print('Client disconnected')
 
+count_str_last1 = [0,0,0]
+count_str_last2 = [0,0,0]
+def testoffline(car_id):
+    #判断小车是否离线
+    global count_str_last1,count_str_last2
+    count_str_now = Cloud.GetDeviceCount(device_id_list[car_id - 1])
+
+    if count_str_now == count_str_last1[car_id - 1] and count_str_now == count_str_last2[car_id - 1]:
+        return True
+    else:
+        count_str_last1[car_id - 1] = count_str_now
+        count_str_last2[car_id - 1] = count_str_last1[car_id - 1]
+        return False
 
 def GetLocation(interval, device_id):
     """9
@@ -346,7 +361,7 @@ def GetLocation(interval, device_id):
     #将百度地图坐标转换成腾讯地图的坐标并更新到uniCloud
     location_bd = {"latitude":location[1],"longitude":location[0]}
     location_tx = bdmapTotxmap(location_bd)
-    post_carinfo(car_id,location_tx['latitude'],location_tx['longitude'])
+    # post_carinfo(car_id,location_tx['latitude'],location_tx['longitude'])
 
 def CalcuTime_dif(timestamp):
     """
@@ -377,15 +392,6 @@ def QueryUniCloud(url_count, url_doc):
         if current_count > init_count:
             time.sleep(1)
             print("=============收到实时需求=============")
-
-            # print(json.loads(requests.get(url_doc, {
-            #     "old_id": init_id,
-            # }, timeout=3).text))
-
-            
-            # new_doc = json.loads(requests.get(url_doc, {
-            #     "old_id": init_id,
-            # }, timeout=3).text)["data"][0]
 
             # 更新状态量
             init_count += 1
@@ -446,7 +452,7 @@ def ProcessSchRes(device_id, car_ServerList):
     @param device_id: 小车设备id
     @param car_ServerList: 共乘调度结果中车辆的路线
     """
-    global dataDict, Car_ServerLists, Car_ServerLists_Length
+    global dataDict, Car_ServerLists, Car_ServerLists_Length,devices_offline
     global dynamic_cnt, previous_cnt, myCustomer
     index = 1
     start_points = []#代表本段路径的起点对应的编码
@@ -457,6 +463,7 @@ def ProcessSchRes(device_id, car_ServerList):
     car_id = 1 if device_id == device_id_01 else (2 if device_id == device_id_02 else 3)
     car_ServerList = Car_ServerLists[car_id - 1]
     need_send_flag = True
+    offline_flag = False
     # 获取初始出发点
     start_points.append(car_ServerList[0])
     #如果在本段路径的起点分配了多个订单（对应Datadict【Nodecoor】相邻的相同节点），则将这些订单一起接上车
@@ -572,7 +579,24 @@ def ProcessSchRes(device_id, car_ServerList):
             # 通过华为云物联网平台下发路径命令
             # res = Cloud.SendArrayCommand(device_id, "car_01", location_array_total)
             res = Cloud.SendArrayCommand(device_id, "hhhcar1", location_array_total)
-            
+            if res is not None and 'response' in res and 'result_code' in res['response'] and res['response']['result_code'] == 0:
+                print("下发成功")
+            else:
+                devices_offline[car_id - 1] = True
+                socketio.emit('send_message_offline', {
+                    'offline': devices_offline
+                })
+            while not (res is not None and 'response' in res and 'result_code' in res['response'] and res['response']['result_code'] == 0):
+                # 若下发失败，重发
+                devices_offline[car_id - 1] = True
+                print(f"{car_id}号车任务及行驶信息下发状态：{res},正在重发")
+                res = Cloud.SendArrayCommand(device_id, "hhhcar1", location_array_total)
+                time.sleep(1.0)
+            devices_offline[car_id - 1] = False 
+            socketio.emit('send_message_offline', {
+                'offline': devices_offline
+            })
+
             print(f"{car_id}号车任务及行驶信息下发状态：{res}")
             # 设置更新3辆小车实时位置的多线程周期性任务
             if not initFlag:
@@ -599,6 +623,18 @@ def ProcessSchRes(device_id, car_ServerList):
                     res = Cloud.ResetStopFlag(device_id)
                     # print(f"{car_id}号车辆状态重置：",res)
                     time.sleep(2.5)
+                
+                if offline_flag:
+                    devices_offline[car_id - 1] = True
+                    socketio.emit('send_message_offline', {
+                        'offline': devices_offline
+                    })
+                    res = Cloud.SendArrayCommand(device_id, "hhhcar1", location_array_total)
+                else:
+                    devices_offline[car_id - 1] = False
+                offline_flag = testoffline(car_id)
+                time.sleep(1.5)
+                
             CarStopFlag = False
 
 
@@ -647,6 +683,18 @@ def ProcessSchRes(device_id, car_ServerList):
                 print("更新小车服务对象",sevice_points)
                 need_send_flag = False
             
+            '''
+            if offline_flag:
+                devices_offline[car_id - 1] = True
+                socketio.emit('send_message_offline', {
+                    'offline': devices_offline
+                })
+            else:
+                devices_offline[car_id - 1] = False
+            offline_flag = testoffline(car_id)
+            time.sleep(1.0)
+            '''
+    
 
 if __name__ == '__main__':
     # socketio.run(app, host='0.0.0.0',port=5000, allow_unsafe_werkzeug=True)

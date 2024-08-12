@@ -131,7 +131,17 @@ class HuaweiCloudObj:
         # return self.ShowDeviceShadow(device_id)['shadow'][1]['reported']['properties']['location']
         """注意上边是索引是1不是0，逆天----------------因为led001有两个服务空间才导致索引是1"""
         # return self.ShowDeviceShadow(device_id)['shadow']
-
+    def GetDeviceCount(self,device_id):
+        """
+        获取小车的计数
+        @param device_id: 小车设备的id
+        @return: 小车的计数
+        """
+        if device_id == "66505a617dbfd46fabbd3225_led001":
+            return self.ShowDeviceShadow(device_id)['shadow'][1]['version']
+        else:
+            return self.ShowDeviceShadow(device_id)['shadow'][0]['version']
+   
 
     def ResetStopFlag(self, device_id):
         """
@@ -204,8 +214,8 @@ if __name__ == "__main__":
     end = RodeArray[1]
     # location_array = [[118.96607,32.11583],[118.965736,32.115793],[118.965402,32.115756]]
     # start_time = time.time()
-    res = GetRealTimeArray(start, end, 25)
-    print(res)
+    #res = GetRealTimeArray(start, end, 25)
+   # print(res)
     # distance, location_array, location_array_amap = [value for value in res.values()]
     # print(len(location_array), len(location_array_amap))
     # print(location_array_amap)
