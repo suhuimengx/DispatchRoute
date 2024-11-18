@@ -257,16 +257,9 @@ Clock = SystemClock(0.325) # 0.065 -> 1s; 3.9 -> 1min
 FileObj = System_file("./路径距离.xls")
 
 # uniCloud云服务空间url
-# uni_url_count = "https://fc-mp-9807717d-5acc-468e-a8a2-2b6850a56613.next.bspapp.com/getcount"
-# uni_url_doc = "https://fc-mp-9807717d-5acc-468e-a8a2-2b6850a56613.next.bspapp.com/downdata"
-# uni_url_id = ("https://fc-mp-9807717d-5acc-468e-a8a2-2b6850a56613.next.bspapp.com/getold")
-
-# uni_url_count = "https://fc-mp-799372a1-cb92-40f1-8736-2de08a0afe18.next.bspapp.com/getcount"
-# uni_url_doc = "https://fc-mp-799372a1-cb92-40f1-8736-2de08a0afe18.next.bspapp.com/downdata"
-# uni_url_id = ("https://fc-mp-799372a1-cb92-40f1-8736-2de08a0afe18.next.bspapp.com/getold")
-uni_url_count = "https://fc-mp-e8d46985-e50c-4bfb-af14-d4dfd054e7b5.next.bspapp.com/getCount"
-uni_url_doc = "https://fc-mp-e8d46985-e50c-4bfb-af14-d4dfd054e7b5.next.bspapp.com/downloadData"
-uni_url_id = ("https://fc-mp-e8d46985-e50c-4bfb-af14-d4dfd054e7b5.next.bspapp.com/getOld")
+uni_url_count = "https://fc-mp-6a266bfc-120f-42dc-9c71-1e9d6f643dfa.next.bspapp.com/getCount"
+uni_url_doc = "https://fc-mp-6a266bfc-120f-42dc-9c71-1e9d6f643dfa.next.bspapp.com/DownloadData"
+uni_url_id = ("https://fc-mp-6a266bfc-120f-42dc-9c71-1e9d6f643dfa.next.bspapp.com/getOld")
 # 系统开始运行时 数据库中的数据量
 init_count = json.loads(requests.get(uni_url_count).text)["total"]
 print(init_count)
@@ -361,7 +354,7 @@ def GetLocation(interval, device_id):
     #将百度地图坐标转换成腾讯地图的坐标并更新到uniCloud
     location_bd = {"latitude":location[1],"longitude":location[0]}
     location_tx = bdmapTotxmap(location_bd)
-    # post_carinfo(car_id,location_tx['latitude'],location_tx['longitude'])
+    post_carinfo(car_id,location_tx['latitude'],location_tx['longitude'])
 
 def CalcuTime_dif(timestamp):
     """
@@ -456,7 +449,7 @@ def ProcessSchRes(device_id, car_ServerList):
     global dynamic_cnt, previous_cnt, myCustomer
     index = 1
     start_points = []#代表本段路径的起点对应的编码
-    end_points = []#代表本段路径终点对应的编码，此编码不一定代表下车，也有可能是去其他标定点接新的乘客
+    end_points = []#代表本段路径终点对应的编码，此编码不一定代表下车，也有可能是去其他点接新的乘客
     CarLoad = 0
     CarStopFlag = False
     initFlag = False
@@ -622,7 +615,7 @@ def ProcessSchRes(device_id, car_ServerList):
                     CarStopFlag = True
                     res = Cloud.ResetStopFlag(device_id)
                     # print(f"{car_id}号车辆状态重置：",res)
-                    time.sleep(2.5)
+                    time.sleep(1.5)
                 
                 if offline_flag:
                     devices_offline[car_id - 1] = True

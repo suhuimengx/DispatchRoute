@@ -10,9 +10,9 @@ def post_carinfo(car_id,latitude,longitude):
     发送报文更新UniCloud的小车位置信息
     @param:car_id:小车id
     @param:latitude:纬度
-    param：longitude：经度
+    @param：longitude：经度
     '''
-    url = "https://fc-mp-e8d46985-e50c-4bfb-af14-d4dfd054e7b5.next.bspapp.com/updateMarkers"
+    url = "https://fc-mp-6a266bfc-120f-42dc-9c71-1e9d6f643dfa.next.bspapp.com/updateMarkers"
     data = {
         "marker_car": 
             {
@@ -36,7 +36,7 @@ def post_carid(orderid,car_id,server_id):
     @param:orderid:订单id
     @param:car_id:小车id
     '''
-    url = "https://fc-mp-e8d46985-e50c-4bfb-af14-d4dfd054e7b5.next.bspapp.com/updateCarId"
+    url = "https://fc-mp-6a266bfc-120f-42dc-9c71-1e9d6f643dfa.next.bspapp.com/updateCarId"
     data = {
         "info": 
             {
@@ -60,7 +60,7 @@ def post_serverid(car_id,server_id):
     @param:car_id:小车id
     @param:server_id:小车本段路径的服务对象（数组）
     '''
-    url = "https://fc-mp-e8d46985-e50c-4bfb-af14-d4dfd054e7b5.next.bspapp.com/updateServerId"
+    url = "https://fc-mp-6a266bfc-120f-42dc-9c71-1e9d6f643dfa.next.bspapp.com/updateServerId"
     data = {
         "info": 
             {
@@ -81,7 +81,7 @@ def post_updateCSL(nCustomer):
     '''
     更新接单小车服务对象
     '''
-    url = 'https://fc-mp-e8d46985-e50c-4bfb-af14-d4dfd054e7b5.next.bspapp.com/updateCSL'
+    url = 'https://fc-mp-6a266bfc-120f-42dc-9c71-1e9d6f643dfa.next.bspapp.com/updateCSL'
     data = {
         "info":
         {
